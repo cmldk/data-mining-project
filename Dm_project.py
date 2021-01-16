@@ -1,15 +1,18 @@
+# -*- coding: utf-8 -*-
+
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier, BaggingClassifier
 from sklearn.neural_network import MLPClassifier
 from sklearn.linear_model import LogisticRegression, Perceptron, SGDClassifier
-from sklearn.metrics import accuracy_score, confusion_matrix, plot_confusion_matrix
+from sklearn.metrics import accuracy_score, confusion_matrix
 import matplotlib.pyplot as plt
-import seaborn as seb
+import seaborn as sns
 import pandas as pd
 import numpy as np
 import time
 from sklearn.preprocessing import LabelEncoder, StandardScaler
 from sklearn.decomposition import PCA
+import xgboost as xgb
 
 def currentTime():
   return int(round(time.time() * 1000))
@@ -45,11 +48,6 @@ pca = PCA(n_components=2)
 data_x_pca = pca.fit_transform(data_x)
 #print(data_x_pca)
 
-# Correlation Matrix
-corr = train_data.corr()
-corr.to_csv("corr.csv")
-corr.to_html("corr.html")
-
 #StandardScaler
 sc = StandardScaler()
 data_y = train_data["netgain"]
@@ -59,7 +57,29 @@ df = dc.drop(["id", "netgain"], axis=1)
 scaled_data = sc.fit_transform(df)
 #print(scaled_data)
 
+# Correlation Matrix
+corr = df.corr()
+corr_heatmap = sns.heatmap(corr, xticklabels=corr.columns, yticklabels=corr.columns)
+fig = corr_heatmap.get_figure()
+fig.savefig("CorrelationHeatmap.pdf", bbox_inches='tight')
 
+#Heatmap function
+def show_heatmap(param1, param2, param3, text):
+  fig2 = plt.figure()
+  df1 = train_data[[param1, param2, param3]]
+  heatmap1_data = pd.pivot_table(df1, values=param3, 
+                      index=[param1], 
+                      columns=param2)
+  sns.heatmap(heatmap1_data, cbar_kws={'label': 'ratings'})
+  fig2.savefig(text,bbox_inches='tight')
+
+#Heatmaps with parameters
+show_heatmap("realtionship_status","genre", "ratings", "Heatmap_Relationship_Genre.pdf")
+show_heatmap("industry", "genre", "ratings", "Heatmap_Industry_Genre.pdf")
+show_heatmap("realtionship_status", "airtime", "ratings", "Heatmap_Relationship_Airtime.pdf")
+show_heatmap("airlocation","targeted_sex", "ratings", "Heatmap_Airlocation_TargetedSex.pdf")
+
+#Accuracy function
 def findAccuracy(algo, algo_name, X_train, X_test, y_train, y_test):
   start_time = currentTime()
   algo.fit(X_train, y_train)
@@ -85,6 +105,10 @@ bag = BaggingClassifier()                   # Bagging
 rfc = RandomForestClassifier()              # Random Forest Classifier
 adb = AdaBoostClassifier()                  # Adaboost
 
+# XGBOOST
+xgboost = xgb.XGBClassifier(max_depth=3,n_estimators=300,learning_rate=0.05)
+
+#Plotting the all results of algorithms on 3 different form of data(PCA, Scaled and Normal)
 for x,t in zip([data_x_pca, scaled_data, data_x],["PCA", "Scaled", "Normal"]):
   passing_times = []
 
@@ -97,24 +121,27 @@ for x,t in zip([data_x_pca, scaled_data, data_x],["PCA", "Scaled", "Normal"]):
   bag_train_score, bag_test_score = findAccuracy(bag, "BAGGING CLASSIFIER", X_train, X_test, y_train, y_test)
   rfc_train_score, rfc_test_score = findAccuracy(rfc, "RANDOM FOREST CLASSIFIER", X_train, X_test, y_train, y_test)
   adb_train_score, adb_test_score = findAccuracy(adb, "ADABOOST CLASSIFIER", X_train, X_test, y_train, y_test)
+  xgb_train_score, xgb_test_score = findAccuracy(xgboost, "XGBOOST CLASSIFIER", X_train, X_test, y_train, y_test)
 
-  algorithms = ["Logistic Regression","Single Layer Perceptron","SGD classifier","MLP classifier","Bagging Classifier","Random Forest Classifier","Adaboost Classifier"]
+  algorithms = ["Logistic Regression","Single Layer Perceptron","SGD classifier","MLP classifier","Bagging Classifier","Random Forest Classifier","Adaboost Classifier","XGBOOST Classifier"]
   algo_to_name = {log_reg: "Logistic Regression",
                   slp: "Single Layer Perceptron",
                   sgd: "SGD classifier",
                   mlp: "MLP classifier",
                   bag: "Bagging Classifier",
                   rfc: "Random Forest Classifier",
-                  adb: "Adaboost Classifier"}
-  train_scores = [logistic_train_score,slp_train_score,sgd_train_score,mlp_train_score,bag_train_score,rfc_train_score,adb_train_score]
-  test_scores = [logistic_test_score,slp_test_score,sgd_test_score,mlp_test_score,bag_test_score,rfc_test_score,adb_test_score]
+                  adb: "Adaboost Classifier",
+                  xgboost: "XGBOOST Classifier"}
+  train_scores = [logistic_train_score,slp_train_score,sgd_train_score,mlp_train_score,bag_train_score,rfc_train_score,adb_train_score,xgb_train_score]
+  test_scores = [logistic_test_score,slp_test_score,sgd_test_score,mlp_test_score,bag_test_score,rfc_test_score,adb_test_score, xgb_test_score]
   algo_to_test = {log_reg: logistic_test_score,
                   slp: slp_test_score,
                   sgd: sgd_test_score,
                   mlp: mlp_test_score,
                   bag: bag_test_score,
                   rfc: rfc_test_score,
-                  adb: adb_test_score}
+                  adb: adb_test_score,
+                  xgboost: xgb_test_score,}
 
   fig2 = plt.figure(figsize=(20,5))
   ax = fig2.add_subplot(1,2,1)
@@ -157,7 +184,7 @@ for x,t in zip([data_x_pca, scaled_data, data_x],["PCA", "Scaled", "Normal"]):
   ax.legend()
 
   fig2.add_subplot(1,2,2)
-  colors = ['red', 'green', 'yellow', 'orange', 'purple','blue', '#b4b85e']
+  colors = ['red', 'green', 'yellow', 'orange', 'purple','blue', '#b4b85e', 'violet']
   ts = []
   for s in test_scores:
     ts.append("{:.3f}".format(s))
@@ -170,8 +197,10 @@ for x,t in zip([data_x_pca, scaled_data, data_x],["PCA", "Scaled", "Normal"]):
   plt.xlabel("Accuracy scores")
   plt.title(t)
   plt.show()
+  text = t + "_Results.pdf"
+  fig2.savefig(text, bbox_inches='tight')
 
-
+# Test prediction results
 test_data_encoded = pd.get_dummies(test_data).drop(["id"], axis=1)
 net_gain_prediction = adb.predict(test_data_encoded)
 result = pd.DataFrame({"id": test_data.id, "realtionship_status": test_data.realtionship_status,
@@ -189,14 +218,14 @@ result.to_csv("results.csv")
 
 fig = plt.figure(figsize=(12,5))
 fig.add_subplot(1,2,1)
-seb.countplot(data=train_data, x="genre", hue="netgain",palette="Set1",
+sns.countplot(data=train_data, x="genre", hue="netgain",palette="Set1",
               order=train_data["genre"].value_counts().index)
 plt.title("Train data")
 fig.add_subplot(1,2,2)
-seb.countplot(data=result, x="genre", hue="netgain_prediction",palette="Set1",
+sns.countplot(data=result, x="genre", hue="netgain_prediction",palette="Set1",
               order=result["genre"].value_counts().index)
 plt.title("Test data")
-plt.savefig("Netgain based comparison for genre.pdf")
+plt.savefig("Netgain based comparison for genre.pdf",bbox_inches='tight')
 
 end = currentTime() - start
 print("Total Runtime: {0}sn".format(end/1000))
