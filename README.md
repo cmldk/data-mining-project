@@ -14,7 +14,10 @@ Version : 3.6.9
 * train.csv -> unzipped from adsuccesdata.zip
 * Dm_project.py -> main file
 * documents -> images and pdf outputs
+* documents/result.csv -> prediction result of the most accurate algorithm
 * Data_Mining_Latex.zip -> latex file and images
+* requirements.txt
+
 
 
 ## Project Tasks
