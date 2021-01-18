@@ -14,6 +14,8 @@ Version : 3.6.9
 * train.csv -> unzipped from adsuccesdata.zip
 * Dm_project.py -> main file
 * documents -> images and pdf outputs
+* Data_Mining_Latex.zip -> latex file and images
+
 
 ## Project Tasks
-![alt text](https://github.com/cmldk/data-mining-project/blob/main/img/tasks.png?raw=true)
+![alt text](https://github.com/cmldk/data-mining-project/blob/main/documents/tasks.png?raw=true)
